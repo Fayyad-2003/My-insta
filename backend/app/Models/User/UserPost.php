@@ -1,19 +1,20 @@
 <?php
 
-namespace App\Models\Post;
+namespace App\Models\User;
 
+use App\Models\Post\Post;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 
-class PostShare extends Model
+class UserPost extends Model
 {
     //
     protected $fillable = [
         'user_id',
-        'post_id',
+        'postable_id',
+        'postable_type',
+        'type'
     ];
-
-    // Relationships
 
     public function user()
     {
@@ -22,6 +23,6 @@ class PostShare extends Model
 
     public function post()
     {
-        return $this->belongsTo(Post::class);
+        return $this->morphTo(Post::class);
     }
 }
