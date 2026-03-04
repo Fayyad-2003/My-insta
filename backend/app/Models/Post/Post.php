@@ -114,7 +114,6 @@ class Post extends Model
             $post->comments()->delete();
             $post->shares()->delete();
             $post->settings()->delete();
-            $post->views()->delete();
 
             UserPost::where('postable_id', $post->id)
                 ->where('postable_type', self::class)
