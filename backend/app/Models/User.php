@@ -77,6 +77,11 @@ class User extends Authenticatable
         return $this->hasOne(Contact::class);
     }
 
+    public function feed()
+    {
+        return $this->hasMany(\App\Models\User\UserFeed::class);
+    }
+
     public function posts()
     {
         return $this->hasMany(Post::class);
