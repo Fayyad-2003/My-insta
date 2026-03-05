@@ -8,6 +8,7 @@ use App\Models\Reel\Reel;
 use App\Models\Story\Story;
 use App\Models\User\BlockedUser;
 use App\Models\User\Bookmark;
+use App\Models\User\Contact;
 use App\Models\User\UserActivity;
 use App\Models\User\UserFollows;
 use App\Models\User\UserSetting;
@@ -69,6 +70,11 @@ class User extends Authenticatable
     public function refreshTokens()
     {
         return $this->hasMany(RefreshToken::class);
+    }
+
+    public function contact()
+    {
+        return $this->hasOne(Contact::class);
     }
 
     public function posts()
