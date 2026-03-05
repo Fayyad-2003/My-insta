@@ -14,6 +14,11 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('post_id')->constrained()->onDelete('cascade');
+
+            $table->timestamp('shared_at')->useCurrent();
+            $table->foreignId('shared_by_id')->constrained('users')->onDelete('cascade');
+            $table->string('platform');
+            $table->string('shared_to');
             $table->timestamps();
         });
     }

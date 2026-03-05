@@ -9,8 +9,11 @@ class PostShare extends Model
 {
     //
     protected $fillable = [
-        'user_id',
+        'shared_to',
         'post_id',
+        'shared_at',
+        'shared_by_id',
+        'platform'
     ];
 
     // Relationships
