@@ -147,6 +147,12 @@ class User extends Authenticatable
             }
         });
 
+        static::created(function ($user) {
+            UserSetting::create([
+                'user_id' => $user->id,
+            ]);
+        });
+
         static::deleting(function ($user) {
             $user->posts()->delete();
             $user->reels()->delete();
