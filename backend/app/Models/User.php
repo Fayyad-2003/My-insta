@@ -11,6 +11,7 @@ use App\Models\User\Bookmark;
 use App\Models\User\Contact;
 use App\Models\User\UserActivity;
 use App\Models\User\UserFollows;
+use App\Models\User\UserPost;
 use App\Models\User\UserSetting;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -99,12 +100,12 @@ class User extends Authenticatable
 
     public function followers()
     {
-        return $this->hasMany(UserFollows::class, 'follower_user_id');
+        return $this->hasMany(UserFollows::class, 'follower_id');
     }
 
     public function following()
     {
-        return $this->hasMany(UserFollows::class, 'follower_user_id');
+        return $this->hasMany(UserFollows::class, 'following_id');
     }
 
     public function bookmarks()
@@ -135,6 +136,16 @@ class User extends Authenticatable
     public function blockedBy()
     {
         return $this->hasMany(BlockedUser::class, 'blocked_user_id');
+    }
+
+    public function userPosts()
+    {
+        return $this->hasMany(UserPost::class);
+    }
+
+    public function postsCount()
+    {
+        return $this->userPosts()->count();
     }
 
     public function hasBlocked(User $user): bool

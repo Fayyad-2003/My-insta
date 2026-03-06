@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Events\User\UserLastSeen;
 use App\Models\User;
 use App\Models\Auth\RefreshToken;
 use Illuminate\Http\Request;
@@ -41,9 +42,13 @@ class AuthApiController extends Controller
             'password' => Hash::make($validated['password']),
         ]);
 
+        $u = new UserResource($user);
+        //info(json_decode($u));
+
+
         event(new Registered($user));
         UserRegister::dispatch($user);
-        UserLastActive::dispatch($user);
+        UserLastSeen::dispatch($user);
 
         return $this->issueTokens($user, 201);
     }
@@ -65,8 +70,7 @@ class AuthApiController extends Controller
         }
 
         $user = Auth::user();
-        
-        UserLastActive::dispatch($user);
+        UserLastSeen::dispatch($user);
 
         return $this->issueTokens($user);
     }
