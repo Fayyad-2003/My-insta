@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Music;
 use File;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class MusicController extends Controller
@@ -159,5 +161,47 @@ class MusicController extends Controller
             'updated' => $updated,
             'removed' => $removed
         ]);
+    }
+
+    public function fetchCoverImage($artist, $album, $title, $filename)
+    {
+        $query = urldecode($artist ? $album : $title);
+        $cover_path = null;
+
+        try {
+            $response = Http::get("https://itunes.apple.com/search?term={$query}&entity=album&limit=1");
+            if ($response->ok() && isset($response['results'][0]['artworkUrl100'])) {
+                $image_url = str_replace('100x100', '600x600', $response['results'][0]['artworkUrl100']);
+                $cover_path = $this->saveCoverFromUrl($image_url, $filename);
+            }
+
+            if (!$cover_path) {
+                $placeholder = 'https://ui-avatars.com/api/?name=' . urlencode($title) . "background=random&size=512";
+                $cover_path = $this->saveCoverFromUrl($placeholder, $filename);
+            }
+            return $cover_path ? 'covers/' . basename($cover_path) : null;
+
+        } catch (\Exception $e) {
+            Log::error("Cover fetch failed for $filename: " . $e->getMessage());
+            return null;
+        }
+
+    }
+
+    protected function saveCoverFromUrl($url, $filename)
+    {
+        $repsonse = Http::get($url);
+
+        if ($repsonse->ok()) {
+            $ext = pathinfo(parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION) ?: "jpg";
+            $cover_name = pathinfo($filename, PATHINFO_FILENAME) . '.' . $ext;
+            $cover_full_path = storage_path('app/public/covers' . $cover_name);
+
+            File::ensureDirectoryExists(dirname($cover_full_path));
+            File::put($cover_full_path, $repsonse->body());
+            return $cover_full_path;
+        }
+
+        return null;
     }
 }
