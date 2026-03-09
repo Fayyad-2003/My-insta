@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\MusicController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -11,5 +12,10 @@ Route::get('/hello', function () {
         'hello' => 'hello'
     ]);
 });
+
+Route::get('/music/generate', [
+    MusicController::class,
+    'generateMusic'
+]);
 
 require __DIR__ . '/auth.php';

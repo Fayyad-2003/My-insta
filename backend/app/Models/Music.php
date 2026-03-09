@@ -16,7 +16,8 @@ class Music extends Model
         'cover_url',
         'is_featured',
         'is_active',
-        'external_url'
+        'external_url',
+        'file_url'
     ];
 
     protected $casts = [

@@ -18,6 +18,7 @@ return new class extends Migration {
             $table->string('genre')->nullable();
             $table->integer('duration')->nullable();
             $table->string('external_url')->nullable();
+            $table->string('file_url');
             $table->string('cover_url')->nullable();
             $table->boolean('is_featured')->default(false);
             $table->boolean('is_active')->default(true);
