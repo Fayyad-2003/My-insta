@@ -166,7 +166,38 @@ class GenerateUserFeedJob implements ShouldQueue
 
     private function getFallbackPopularContent(array $excludedUserIds, int $needed): Collection
     {
-        return collect();
+        $limitPerType = max(0, ceil($needed / 2));
+        $popularPosts = Post::
+            query()
+            ->select()
+            ->withCount('likes', 'views')
+            ->whereNotIn('user_id', $excludedUserIds)
+            ->where('is_published', true)
+            ->where('created_at', '>', now()->subDays(14))
+            ->orderByDesc('likes_count')
+            ->limit($limitPerType)
+            ->get()
+            ->map(fn($post) => [
+                'content_type' => 'post',
+                'model' => $post
+            ])
+        ;
+        $popularReels = Reel::
+            query()
+            ->select()
+            ->withCount('likes', 'views')
+            ->whereNotIn('user_id', $excludedUserIds)
+            ->where('is_published', true)
+            ->where('created_at', '>', now()->subDays(14))
+            ->orderByDesc('likes_count')
+            ->limit($limitPerType)
+            ->get()
+            ->map(fn($reel) => [
+                'content_type' => 'reel',
+                'model' => $reel
+            ])
+        ;
+        return collect($popularPosts->merge($popularReels)->values()->all());
     }
 
     private function scoreAndRankContent(Collection $content, Collection $userPreferences, array $followedUserIds): Collection
