@@ -105,8 +105,8 @@ class GenerateReelAITagsJob implements ShouldQueue
         $labels = array_unique(array_filter($labels));
 
         return [
-            'labels' => $labels,
-            'hashtags' => $hashtags
+            'labels' => $labels ?: ['general'],
+            'hashtags' => $hashtags ?: ['general']
         ];
     }
 }
