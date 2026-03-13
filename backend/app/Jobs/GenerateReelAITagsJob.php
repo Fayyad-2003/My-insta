@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Models\Post\Post;
+use App\Models\Reel\Reel;
 use App\Services\AI\TagSuggestionService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -11,16 +11,16 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
-class GeneratePostAITagsJob implements ShouldQueue
+class GenerateReelAITagsJob implements ShouldQueue
 {
     use Queueable, InteractsWithQueue, SerializesModels;
 
-    public int $postId;
+    public int $reelId;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(int $postId)
+    public function __construct(int $reelId)
     {
         //
     }
@@ -30,34 +30,34 @@ class GeneratePostAITagsJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $post = Post::find($this->postId);
+        $reel = Reel::find($this->reelId);
 
-        if (!$post) {
+        if (!$reel) {
             return;
         }
 
         try {
             $musicTitle = null;
-            $ai = TagSuggestionService::suggestTags($post->content ?? '', $musicTitle);
+            $ai = TagSuggestionService::suggestTags($reel->caption ?? '', $musicTitle);
 
             // Fallback
             if (empty($ai['labels']) && empty($ai['hashtags'])) {
-                $ai = $this->fallbackSuggestTags($post);
+                $ai = $this->fallbackSuggestTags($reel);
             }
 
-            $post->update([
-                'tags' => array_unique(array_merge($post->tags ?? [], $ai['hashtags'] ?? [])),
+            $reel->update([
+                'tags' => array_unique(array_merge($reel->tags ?? [], $ai['hashtags'] ?? [])),
                 'ai_labels' => $ai['labels']
             ]);
 
         } catch (\Exception $e) {
             Log::error($e);
-            $fallback = $this->fallbackSuggestTags($post);
+            $fallback = $this->fallbackSuggestTags($reel);
 
-            $post->update([
+            $reel->update([
                 'tags' => array_unique(
                     array_merge(
-                        $post->tags ?? [],
+                        $reel->tags ?? [],
                         $fallback['hashtags'] ?? []
                     )
                 ),
@@ -66,17 +66,17 @@ class GeneratePostAITagsJob implements ShouldQueue
         }
     }
 
-    private function fallbackSuggestTags(Post $post)
+    private function fallbackSuggestTags(Reel $reel)
     {
-        if (empty($post->content)) {
+        if (empty($reel->caption)) {
             return [
                 'labels' => [],
                 'hashtags' => []
             ];
         }
 
-        $content = strtolower($post->content ?? '');
-        $words = collect(preg_split('/\s+/', $content))
+        $caption = strtolower($reel->caption ?? '');
+        $words = collect(preg_split('/\s+/', $caption))
             ->filter(function ($word) {
                 return strlen($word) > 3 && !Str::startsWith($word, '#');
             })
@@ -89,15 +89,15 @@ class GeneratePostAITagsJob implements ShouldQueue
         $hashtags = array_map(fn($w) => preg_match('/[^\W]/', '', $w), $words);
 
         // Add some categroy-based defaults
-        if (Str::contains($content, 'music') || Str::contains($content, 'song')) {
+        if (Str::contains($caption, 'music') || Str::contains($caption, 'song')) {
             $hashtags[] = 'music';
-        } else if (Str::contains($content, 'travel')) {
+        } else if (Str::contains($caption, 'travel')) {
             $hashtags[] = 'travel';
-        } else if (Str::contains($content, 'food')) {
+        } else if (Str::contains($caption, 'food')) {
             $hashtags[] = 'food';
-        } else if (Str::contains($content, 'fashion')) {
+        } else if (Str::contains($caption, 'fashion')) {
             $hashtags[] = 'fashion';
-        } else if (Str::contains($content, 'style')) {
+        } else if (Str::contains($caption, 'style')) {
             $hashtags[] = 'style';
         }
 
