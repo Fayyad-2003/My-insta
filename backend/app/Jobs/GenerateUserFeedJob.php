@@ -2,6 +2,8 @@
 
 namespace App\Jobs;
 
+use App\Models\Post\Post;
+use App\Models\Reel\Reel;
 use App\Models\User;
 use App\Models\User\UserFeed;
 use App\Models\User\UserPreference;
@@ -108,12 +110,58 @@ class GenerateUserFeedJob implements ShouldQueue
 
     private function getPostCandidate(array $excludedUserIds, Collection $userPreferences): Collection
     {
-        return collect();
+        if ($userPreferences->isEmpty()) {
+            return collect();
+        }
+
+        $raw = Post::query()
+            ->select(['id', 'user_id', 'tags', 'ai_labels', 'created_at'])
+            ->withCount('likes', 'view')
+            ->whereNotIn('user_id', $excludedUserIds)
+            ->where('is_published', true)
+            ->where('created_at', now()->subDays(7))
+            ->where(function ($query) use ($userPreferences) {
+                foreach ($userPreferences->keys as $label) {
+                    $query->orWhereJsonContains('tags', $label)
+                        ->orWhereJsonContains('ai_labels', $label);
+                }
+            })->latest('id')->limit(self::MAX_CANDIDATES)->get();
+
+        return collect($raw->map(function ($post) {
+            return [
+                'content_type' => 'post',
+                'model' => $post,
+                'content_id' => $post->id
+            ];
+        })->values()->all());
     }
 
     private function getReelCandidate(array $excludedUserIds, Collection $userPreferences): Collection
     {
-        return collect();
+        if ($userPreferences->isEmpty()) {
+            return collect();
+        }
+
+        $raw = Reel::query()
+            ->select(['id', 'user_id', 'tags', 'ai_labels', 'created_at'])
+            ->withCount('likes', 'view')
+            ->whereNotIn('user_id', $excludedUserIds)
+            ->where('is_published', true)
+            ->where('created_at', now()->subDays(7))
+            ->where(function ($query) use ($userPreferences) {
+                foreach ($userPreferences->keys as $label) {
+                    $query->orWhereJsonContains('tags', $label)
+                        ->orWhereJsonContains('ai_labels', $label);
+                }
+            })->latest('id')->limit(self::MAX_CANDIDATES)->get();
+
+        return collect($raw->map(function ($reel) {
+            return [
+                'content_type' => 'reel',
+                'model' => $reel,
+                'content_id' => $reel->id
+            ];
+        })->values()->all());
     }
 
     private function getFallbackPopularContent(array $excludedUserIds, int $needed): Collection
