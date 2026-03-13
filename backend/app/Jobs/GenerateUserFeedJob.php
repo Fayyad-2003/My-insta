@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\User;
+use App\Models\User\UserFeed;
 use App\Models\User\UserPreference;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -10,6 +11,7 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class GenerateUserFeedJob implements ShouldQueue
@@ -139,8 +141,24 @@ class GenerateUserFeedJob implements ShouldQueue
         return collect();
     }
 
-    private function saveFeed(User $user, Collection $finalFeed): Collection
+    private function saveFeed(User $user, Collection $feed)
     {
-        return collect();
+        if ($feed->isEmpty()) {
+            Log::info('User ' . $user->id . 'has no feed items');
+            return;
+        }
+
+        $uniqueFeed = $feed->unique(function ($item) {
+            return $item['user_id']
+                . '-' . $item['content_type']
+                . '-' . $item['content_id']
+            ;
+        })->values();
+
+        DB::transaction(function () use ($user, $uniqueFeed) {
+            UserFeed::where('user_id', $user->id)->delete();
+            UserFeed::insert($uniqueFeed->toArray());
+        });
+
     }
 }
