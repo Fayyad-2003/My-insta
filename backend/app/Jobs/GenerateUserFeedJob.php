@@ -22,6 +22,6 @@ class GenerateUserFeedJob implements ShouldQueue
      */
     public function handle(): void
     {
-        //
+
     }
 }

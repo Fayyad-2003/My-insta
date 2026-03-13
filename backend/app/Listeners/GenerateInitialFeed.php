@@ -3,6 +3,7 @@
 namespace App\Listeners;
 
 use App\Events\User\UserRegister;
+use App\Jobs\GenerateUserFeedJob;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 
@@ -21,7 +22,7 @@ class GenerateInitialFeed
      */
     public function handle(UserRegister $event): void
     {
-        //
-        info("new user registered, message form from listener {$event->user->name}");
+        $userId = $event->user->id;
+        GenerateUserFeedJob::dispatch($userId);
     }
 }
