@@ -251,22 +251,118 @@ class GenerateUserFeedJob implements ShouldQueue
         });
 
 
-        return collect();
+        return $scored->sortByDesc('score')->values();
     }
 
     private function getUserCandidates(array $excludedUserIds, array $interests): Collection
     {
-        return collect();
+        if (empty($interests)) {
+            return collect();
+        }
+
+        $recentInerestQuery = function ($q) use ($interests) {
+            $q->where('created_at', '>=', now()->subDays(30))
+                ->where(function ($q2) use ($interests) {
+                    $q2->orWhereJsonContains('tags', $interests)
+                        ->orWhereJsonContains('labels', $interests);
+                });
+        };
+
+        $postUserIds = Post::where($recentInerestQuery)->pluck('user_id')->all();
+        $reelUserIds = Reel::where($recentInerestQuery)->pluck('user_id')->all();
+
+        $userIds = $postUserIds->merge($reelUserIds)
+            ->unique()
+            ->reject(fn($id) => in_array($id, $excludedUserIds))
+            ->take(self::MAX_CANDIDATES);
+
+        if ($userIds->isEmpty()) {
+            return collect();
+        }
+
+        return User::whereIn('id', $userIds)
+            ->withCount('follwers')
+            ->get();
     }
 
     private function scoreAndRankUsers(Collection $candidateUsers): Collection
     {
-        return collect();
+        if ($candidateUsers->isEmpty()) {
+            return collect();
+        }
+
+        $ids = $candidateUsers->pluck('id');
+        $lookBack = now()->subDays(7);
+
+        $recentPosts = Post::whereIn('user_id', $ids)
+            ->where('created_at', '>=', $lookBack)
+            ->withCount('likes')
+            ->get()
+            ->groupBy('user_id');
+
+        $recentReels = Reel::whereIn('user_id', $ids)
+            ->where('created_at', '>=', $lookBack)
+            ->withCount('likes')
+            ->get()
+            ->groupBy('user_id');
+
+        return $candidateUsers->map(function ($user) use ($recentPosts, $recentReels) {
+            $score = log10(1 + $user->followers_count) * 20;
+
+            $recentCount = ($recentPosts->get($user->id)?->count() ?? 0) +
+                ($recentReels->get($user->id)?->count() ?? 0);
+
+            if ($recentCount > 0) {
+                $totalLikes = ($recentPosts->get($user->id)?->sum('likes_count') ?? 0)
+                    + ($recentReels->get($user->id)?->sum('likes_count') ?? 0);
+
+                $avgLikes = $totalLikes / $recentCount;
+                $score += min(20, $avgLikes * 3);
+            }
+
+            $score += 20;
+
+            return [
+                'user_id' => $this->userId,
+                'content_type' => 'user',
+                'content_id' => $user->id,
+                'score' => round($score, 2),
+                'is_ai_generated' => round($score, 2),
+                'created_at' => now(),
+                'updated_at' => now()
+            ];
+        })->filter(fn($i) => $i['score'] > 40)
+            ->take(self::TARGET_USERS * 2)
+            ->values();
     }
 
-    private function blendFeed(Collection $content, Collection $scoreUsers): Collection
+    private function blendFeed(Collection $scoredContent, Collection $scoreUsers): Collection
     {
-        return collect();
+        $topPosts = $scoreUsers->where('content_type', 'post')
+            ->sortByDesc('score')
+            ->take(self::TARGET_POSTS);
+
+        $topReels = $scoreUsers->where('content_type', 'reel')
+            ->sortByDesc('score')
+            ->take(self::TARGET_REELS);
+
+        $topUsers = $scoreUsers
+            ->sortByDesc('score')
+            ->take(self::TARGET_USERS);
+
+        $guaranteed = $topPosts->merge($topReels)->merge($topPosts);
+
+        $usedKeys = $guaranteed->map(fn($i) => "{$i['content_type']}-{$i['content_id']}");
+
+        $remaining = $scoredContent
+            ->merge($scoreUsers)
+            ->reject(fn($i) => $usedKeys->contains("{$i['content_type']}-{$i['content_id']}"));
+
+        return $guaranteed
+            ->merge($remaining)
+            ->sortByDesc('score')
+            ->values()
+            ->take(self::MAX_FEED_ITEMS);
     }
 
     private function saveFeed(User $user, Collection $feed)
