@@ -202,6 +202,55 @@ class GenerateUserFeedJob implements ShouldQueue
 
     private function scoreAndRankContent(Collection $content, Collection $userPreferences, array $followedUserIds): Collection
     {
+        if ($content->isEmpty()) {
+            return collect();
+        }
+
+        // compute maxima safely (models are nested in 'model')
+        $maxLikes = max(1, $content->max(function ($i) {
+            return $i['model']->likes_count ?? 0;
+        }));
+
+        $maxViews = max(1, $content->max(function ($i) {
+            return $i['model']->views_count ?? 0;
+        }));
+
+        $scored = $content->map(function ($item) use ($userPreferences, $maxLikes, $maxViews, $followedUserIds) {
+            $model = $item['model'];
+            $tags = array_merge($model->$tags ?? [], $model->ai_labels ?? []);
+            $prefScore = collect($tags)
+                ->filter(fn($tag) => $userPreferences->has($tag))
+                ->sum(fn($tag) => $userPreferences->get($tag) * 2);
+
+            $popularity = 0;
+            $popularity += (min(10, $model->likes_count ?? 0) / $maxLikes) * 5;
+            $popularity += (min(10, $model->views_count ?? 0) / $maxViews) * 2;
+
+            $hourseAgo = now()->subHours(78);
+            $recency = max(0, (78 - $hourseAgo) / 78) * 10;
+
+            // Base score
+            $score = $prefScore + $popularity + $recency;
+            if ($item['content_type'] === 'post') {
+
+            }
+
+            if ($item['content_type'] === 'reel') {
+                $score *= 1.5;
+            }
+
+            return [
+                'content_type' => $item['content_type'],
+                'content_id' => $model->id,
+                'score' => $score,
+                'is_ai_generated' => true,
+                'user_id' => $model->user_id,
+                'created_at' => now(),
+                'updated_at' => now()
+            ];
+        });
+
+
         return collect();
     }
 
