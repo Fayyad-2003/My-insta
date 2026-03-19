@@ -1,28 +1,45 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet } from "react-native";
 
 import { Text, View } from "@/components/Themed";
 import API from "@/services/api/API";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { getFeeds } from "@/services/feed";
+import { Snackbar } from "react-native-paper";
 
 export default function HomeScreen() {
-  console.log("hello");
-  useEffect(() => {
-    const fetchHello = async () => {
-      try {
-        const response = await API.get("/hello");
-        console.log("Backend hello API response:", response.data);
-      } catch (error) {
-        console.error("Failed to fetch backend hello API:", error);
-      }
-    };
+  const [isLoading, setIsLoading] = useState(true);
+  const [feedData, setFeedData] = useState([]);
+  const [error, setError] = useState(null);
 
-    fetchHello();
+  useEffect(() => {
+    fetchFeedData();
+  }, []);
+
+  const fetchFeedData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await getFeeds();
+      setFeedData(response.data);
+    } catch (err: Error | any) {
+      setError(err?.message || "Failed to fetch feed data.");
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Home Screen</Text>
-    </View>
+    <SafeAreaView>
+      {/* <Snackbar
+        visible={!error}
+        duration={3000}
+        onDismiss={() => {
+          setError(null);
+        }}
+      ></Snackbar> */}
+      {/* {error} */}
+      <Text>Ia`m Fayyad</Text>
+    </SafeAreaView>
   );
 }
 

@@ -13,7 +13,7 @@ return new class extends Migration {
         Schema::create('reel_views', function (Blueprint $table) {
             $table->id();
             $table->foreignId('reel_id')->constrained('reels')->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained('user')->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->timestamp('viewed_at')->useCurrent();
             $table->timestamps();
         });

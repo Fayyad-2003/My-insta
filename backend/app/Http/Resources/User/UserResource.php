@@ -31,15 +31,15 @@ class UserResource extends JsonResource
             'followers_counts' => $this->followers()->count(),
             'posts_count' => $this->postsCount(),
             'avatar' => $this->avatar,
-            'last_seen' => optional($this->last_seen)->toIso860IString(),
+            'last_seen' => optional($this->last_seen)->toIso8601String(),
             'contact' => $contact,
             'settings' => $hasSettings ? [
                 'privacy' => $this->setting->privacy,
                 'allow_comments' => $this->setting->allow_comments,
                 'allow_tagging' => $this->setting->allow_tagging,
             ] : null,
-            'is_following' => $authUser ? $this->isFollowing($authUser) : false,
-            'is_blocked_by' => $authUser ? $this->isBolckedBy($authUser) : false,
+            'is_following' => $authUser ? \App\Models\User\UserFollows::where('follower_id', $authUser->id)->where('following_id', $this->id)->exists() : false,
+            'is_blocked_by' => $authUser ? $this->isBlockedBy($authUser) : false,
             'created_at' => $this->created_at,
         ];
     }

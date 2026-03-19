@@ -21,7 +21,7 @@ return new class extends Migration {
             $table->string('zip_code')->nullable();
             $table->string('is_public')->default(false);
             $table->string('is_primary')->default(false);
-            $table->string('zip_code')->nullable();
+            // $table->string('zip_code')->nullable();
             $table->timestamps();
         });
     }

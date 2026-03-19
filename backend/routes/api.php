@@ -30,9 +30,12 @@ Route::middleware(['auth:sanctum'])->get('/user', function (Request $request) {
 });
 
 /**
- * Home feed routes
+ * Authenticated user routes
  */
 Route::middleware(['auth:sanctum'])->group(function () {
+    Route::post('/logout', [AuthApiController::class, 'logout']);
+
+    // Home feed routes
     Route::get('/feed', [FeedController::class, 'index']);
     Route::get('/explore', [FeedController::class, 'explore']);
 });
