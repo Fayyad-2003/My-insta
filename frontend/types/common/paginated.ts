@@ -1,0 +1,14 @@
+export interface Paginated<T> {
+  current_page: number;
+  per_page: number;
+  last_page: number;
+  total: number;
+  data: T[];
+}
+
+export interface Meta {
+  current_page: number;
+  per_page: number;
+  last_page: number;
+  total: number;
+}
